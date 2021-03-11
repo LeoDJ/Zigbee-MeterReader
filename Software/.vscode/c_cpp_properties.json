@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${NRF5_ZIGBEE_SDK_PATH}/**"
+            ],
+            "browse": {
+                "path": [
+                    "${NRF5_ZIGBEE_SDK_PATH}"
+                ]
+            },
+            "defines": [
+                // taken from Makefile
+                "APP_TIMER_V2",
+                "APP_TIMER_V2_RTC1_ENABLED",
+                "BOARD_PCA10056",
+                "CONFIG_GPIO_AS_PINRESET",
+                "ENABLE_FEM",
+                "FLOAT_ABI_HARD",
+                "MBR_PRESENT",
+                "NRF52840_XXAA",
+                "ZB_TRACE_LEVEL=0",
+                "ZB_TRACE_MASK=0"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}

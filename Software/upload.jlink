@@ -1,0 +1,4 @@
+h
+loadbin _build\nrf52840_xxaa.hex 0x0
+r
+q
