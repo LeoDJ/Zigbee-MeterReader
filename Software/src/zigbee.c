@@ -62,7 +62,7 @@ ZB_ZCL_DECLARE_POWER_CONFIG_SIMPLIFIED_ATTRIB_LIST(power_attr_list,
     &m_dev_ctx.power_attr.battery_remaining_percentage,
     &m_dev_ctx.power_attr.alarm_state);
 
-// ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration
+// ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration for better readability
 zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
     ZB_ZCL_CLUSTER_DESC(
         ZB_ZCL_CLUSTER_ID_IDENTIFY,
@@ -123,17 +123,19 @@ static void zb_app_timer_handler(void * context)
     if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
         NRF_LOG_INFO("Set battery voltage value fail. zcl_status: %d", zcl_status);
     }
-    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
-        ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
-        ZB_ZCL_CLUSTER_SERVER_ROLE,
-        ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_PERCENTAGE_REMAINING_ID,
-        &batVoltage,
-        ZB_FALSE );
-    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
-        NRF_LOG_INFO("Set battery voltage value fail. zcl_status: %d", zcl_status);
-    }
+    // zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+    //     ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
+    //     ZB_ZCL_CLUSTER_SERVER_ROLE,
+    //     ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_PERCENTAGE_REMAINING_ID,
+    //     &batVoltage,
+    //     ZB_FALSE );
+    // if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+    //     NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
+    // }
     batVoltage = (batVoltage + 1) % 100;
     NRF_LOG_INFO("Battery Voltage: %d", batVoltage);
+
+    
 }
 
 // zigbee handler from lmahmutov, for later reference:

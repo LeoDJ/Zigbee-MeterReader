@@ -35,7 +35,7 @@ typedef struct {
     zb_zcl_basic_attrs_ext_t            basic_attr;
     zb_zcl_identify_attrs_t             identify_attr;
     power_simplified_attr_t             power_attr;
-    zb_zcl_temp_measurement_attrs_t     temp_attr;
+    zb_zcl_metering_attrs_t             metering_attr;
 } sensor_device_ctx_t;
 
 /** @brief Declares simple descriptor for the "Device_name" device.
@@ -60,6 +60,7 @@ typedef struct {
       ZB_ZCL_CLUSTER_ID_BASIC,                                                        \
       ZB_ZCL_CLUSTER_ID_IDENTIFY,                                                     \
       ZB_ZCL_CLUSTER_ID_POWER_CONFIG,                                                 \
+      ZB_ZCL_CLUSTER_ID_METERING,                                                     \
       ZB_ZCL_CLUSTER_ID_IDENTIFY,                                                     \
     }                                                                                 \
   }
