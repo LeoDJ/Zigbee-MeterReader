@@ -14,18 +14,19 @@ const device = {
     model: 'Pulsesensor',
     vendor: 'Gingerlabs',
     description: 'Universal pulse sensor',
-    fromZigbee: [fz.battery/*, fz.metering*/],
+    fromZigbee: [fz.battery, fz.metering],
     toZigbee: [],
     meta: {configureKey: 1},
-    exposes: [],
+    exposes: [e.battery(), e.power(), e.energy()],
     configure: async (device, coordinatorEndpoint, logger) => {
         const endpoint = device.getEndpoint(10);
-        const binds = ['genPowerCfg'/*, 'seMetering'*/];
+        const binds = ['genPowerCfg', 'seMetering'];
         await reporting.bind(endpoint, coordinatorEndpoint, binds);
         await reporting.batteryPercentageRemaining(endpoint);
         await reporting.batteryVoltage(endpoint);
-        // await reporting.instantaneousDemand(endpoint);
-        // await reporting.readMeteringMultiplierDivisor(endpoint);
+        await reporting.readMeteringMultiplierDivisor(endpoint);
+        await reporting.currentSummDelivered(endpoint);
+        await reporting.instantaneousDemand(endpoint, {min: 0, max: 900, change: 1}); // min max interval in s
     },
 };
 

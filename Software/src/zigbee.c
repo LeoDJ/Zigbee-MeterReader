@@ -27,12 +27,25 @@ static sensor_device_ctx_t m_dev_ctx = {
     .identify_attr = (zb_zcl_identify_attrs_t) {
         .identify_time  = ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE
     },
-    .power_attr = (power_simplified_attr_t) {
+    .power_attr = (zbc_power_simplified_attr_t) {
         .battery_voltage                = ZB_ZCL_POWER_CONFIG_BATTERY_VOLTAGE_INVALID,
         .battery_remaining_percentage   = ZB_ZCL_POWER_CONFIG_BATTERY_REMAINING_UNKNOWN,
         .alarm_state                    = ZB_ZCL_POWER_CONFIG_BATTERY_ALARM_STATE_DEFAULT_VALUE
+    },
+    .metering_attr = (zbc_metering_extended_attr_t) {
+        .curr_summ_delivered                = 0,
+        .status                             = 0,
+        .unit_of_measure                    = ZB_ZCL_METERING_UNIT_UNITLESS_BINARY,
+        .summation_formatting               = 0,
+        .device_type                        = ZB_ZCL_METERING_ELECTRIC_METERING,
+        .instantaneous_demand               = 0,
+        .demand_formatting                  = 0,
+        .historical_consumption_formatting  = 0,
+        .multiplier                         = 1,
+        .divisor                            = 1000
     }
 };
+
 
 void initialize_sensor_device_ctx_strings() {
     // need to set strings with helper function because zboss puts the length of the string at the beginning
@@ -62,6 +75,19 @@ ZB_ZCL_DECLARE_POWER_CONFIG_SIMPLIFIED_ATTRIB_LIST(power_attr_list,
     &m_dev_ctx.power_attr.battery_remaining_percentage,
     &m_dev_ctx.power_attr.alarm_state);
 
+ZB_ZCL_DECLARE_METERING_ATTRIB_LIST_EXT(meter_attr_list,
+    &m_dev_ctx.metering_attr.curr_summ_delivered,
+    &m_dev_ctx.metering_attr.status,
+    &m_dev_ctx.metering_attr.unit_of_measure,
+    &m_dev_ctx.metering_attr.summation_formatting,
+    &m_dev_ctx.metering_attr.device_type,
+    &m_dev_ctx.metering_attr.instantaneous_demand,
+    &m_dev_ctx.metering_attr.demand_formatting,
+    &m_dev_ctx.metering_attr.historical_consumption_formatting,
+    &m_dev_ctx.metering_attr.multiplier,
+    &m_dev_ctx.metering_attr.divisor
+);
+
 // ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration for better readability
 zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
     ZB_ZCL_CLUSTER_DESC(
@@ -86,6 +112,13 @@ zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
         ZB_ZCL_MANUF_CODE_INVALID
     ),
     ZB_ZCL_CLUSTER_DESC(
+        ZB_ZCL_CLUSTER_ID_METERING,
+        ZB_ZCL_ARRAY_SIZE(meter_attr_list, zb_zcl_attr_t),
+        (meter_attr_list),
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_MANUF_CODE_INVALID
+    ),
+    ZB_ZCL_CLUSTER_DESC(
         ZB_ZCL_CLUSTER_ID_IDENTIFY,
         0,
         NULL,
@@ -103,6 +136,7 @@ ZBOSS_DECLARE_DEVICE_CTX_1_EP(multi_sensor_ctx, multi_sensor_ep);
 APP_TIMER_DEF(zb_app_timer);
 
 zb_int8_t batVoltage = 0;
+zb_uint64_t powerUsage = 0;
 
 /**@brief Function for handling nrf app timer.
  * 
@@ -123,17 +157,40 @@ static void zb_app_timer_handler(void * context)
     if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
         NRF_LOG_INFO("Set battery voltage value fail. zcl_status: %d", zcl_status);
     }
-    // zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
-    //     ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
-    //     ZB_ZCL_CLUSTER_SERVER_ROLE,
-    //     ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_PERCENTAGE_REMAINING_ID,
-    //     &batVoltage,
-    //     ZB_FALSE );
-    // if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
-    //     NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
-    // }
-    batVoltage = (batVoltage + 1) % 100;
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_PERCENTAGE_REMAINING_ID,
+        &batVoltage,
+        ZB_FALSE );
+    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+        NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
+    }
+    batVoltage = (batVoltage + 1) % 200;
     NRF_LOG_INFO("Battery Voltage: %d", batVoltage);
+
+
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_METERING,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
+        (zb_uint8_t *)&powerUsage,
+        ZB_FALSE);
+    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+        NRF_LOG_INFO("Set current summation delivered value fail. zcl_status: %d", zcl_status);
+    }
+
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_METERING,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID,
+        (zb_uint8_t *)&powerUsage,
+        ZB_FALSE);
+    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+        NRF_LOG_INFO("Set instantaneous demand value fail. zcl_status: %d", zcl_status);
+    }
+
+    powerUsage += 10;
 
     
 }
