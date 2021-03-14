@@ -75,18 +75,19 @@ ZB_ZCL_DECLARE_POWER_CONFIG_SIMPLIFIED_ATTRIB_LIST(power_attr_list,
     &m_dev_ctx.power_attr.battery_remaining_percentage,
     &m_dev_ctx.power_attr.alarm_state);
 
-ZB_ZCL_DECLARE_METERING_ATTRIB_LIST_EXT(meter_attr_list,
-    &m_dev_ctx.metering_attr.curr_summ_delivered,
-    &m_dev_ctx.metering_attr.status,
-    &m_dev_ctx.metering_attr.unit_of_measure,
-    &m_dev_ctx.metering_attr.summation_formatting,
-    &m_dev_ctx.metering_attr.device_type,
-    &m_dev_ctx.metering_attr.instantaneous_demand,
-    &m_dev_ctx.metering_attr.demand_formatting,
-    &m_dev_ctx.metering_attr.historical_consumption_formatting,
-    &m_dev_ctx.metering_attr.multiplier,
-    &m_dev_ctx.metering_attr.divisor
-);
+// ZB_ZCL_DECLARE_METERING_ATTRIB_LIST_EXT replaced with direct definition for better readability
+ZB_ZCL_START_DECLARE_ATTRIB_LIST(meter_attr_list)
+    ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_WRITEABLE_ID(&m_dev_ctx.metering_attr.curr_summ_delivered),
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_STATUS_ID, (&m_dev_ctx.metering_attr.status))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_UNIT_OF_MEASURE_ID, (&m_dev_ctx.metering_attr.unit_of_measure))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_SUMMATION_FORMATTING_ID, (&m_dev_ctx.metering_attr.summation_formatting))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_METERING_DEVICE_TYPE_ID, (&m_dev_ctx.metering_attr.device_type))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID, (&m_dev_ctx.metering_attr.instantaneous_demand))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_DEMAND_FORMATTING_ID, (&m_dev_ctx.metering_attr.demand_formatting))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_HISTORICAL_CONSUMPTION_FORMATTING_ID, (&m_dev_ctx.metering_attr.historical_consumption_formatting))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_MULTIPLIER_ID, (&m_dev_ctx.metering_attr.multiplier))
+    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_DIVISOR_ID, (&m_dev_ctx.metering_attr.divisor))
+    ZB_ZCL_FINISH_DECLARE_ATTRIB_LIST;
 
 // ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration for better readability
 zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
@@ -135,7 +136,7 @@ ZBOSS_DECLARE_DEVICE_CTX_1_EP(multi_sensor_ctx, multi_sensor_ep);
 
 APP_TIMER_DEF(zb_app_timer);
 
-zb_int8_t batVoltage = 0;
+zb_uint8_t batVoltage = 0;
 zb_uint64_t powerUsage = 0;
 
 /**@brief Function for handling nrf app timer.
@@ -167,8 +168,9 @@ static void zb_app_timer_handler(void * context)
         NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
     }
     batVoltage = (batVoltage + 1) % 200;
-    NRF_LOG_INFO("Battery Voltage: %d", batVoltage);
+    // NRF_LOG_INFO("Battery Voltage: %d", m_dev_ctx.power_attr.battery_voltage);
 
+    NRF_LOG_INFO("current summation delivered: %d", m_dev_ctx.metering_attr.curr_summ_delivered.low);
 
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
         ZB_ZCL_CLUSTER_ID_METERING,
@@ -307,6 +309,35 @@ void zboss_signal_handler(zb_bufid_t bufid)
     }
 }
 
+/**@brief Callback function for handling ZCL commands.
+ *
+ * @param[in]   bufid   Reference to Zigbee stack buffer used to pass received data.
+ */
+static zb_void_t zcl_device_cb(zb_bufid_t bufid)
+{
+    zb_uint8_t                       cluster_id;
+    zb_uint8_t                       attr_id;
+    zb_zcl_device_callback_param_t * p_device_cb_param = ZB_BUF_GET_PARAM(bufid, zb_zcl_device_callback_param_t);
+
+    NRF_LOG_INFO("zcl_device_cb id %hd", p_device_cb_param->device_cb_id);
+
+    switch (p_device_cb_param->device_cb_id)
+    {
+        case ZB_ZCL_SET_ATTR_VALUE_CB_ID: {
+            cluster_id = p_device_cb_param->cb_param.set_attr_value_param.cluster_id;
+            attr_id    = p_device_cb_param->cb_param.set_attr_value_param.attr_id;
+            zb_uint48_t value = p_device_cb_param->cb_param.set_attr_value_param.values.data48;
+            // switch(cluster_id) {
+            //     case ZB_ZCL_CLUSTER_ID_METERING:
+            //     break;
+            // }
+            NRF_LOG_INFO("Unhandled cluster id: %d, attribute: %d, value: %d", cluster_id, attr_id, value.low);
+            break;
+        }
+    }
+}
+
+
 void zigbeeInit() {
     initialize_sensor_device_ctx_strings();
 
@@ -325,6 +356,7 @@ void zigbeeInit() {
     /* Set device address to the value read from FICR registers. */
     zb_ieee_addr_t ieee_addr;
     zb_osif_get_ieee_eui64(ieee_addr);
+    // ieee_addr[0] += 1;
     zb_set_long_address(ieee_addr);
 
     /* Set static long IEEE address. */
@@ -337,6 +369,9 @@ void zigbeeInit() {
 
     // Initialize application context structure.
     // ZB_MEMSET(&m_dev_ctx, 0, sizeof(m_dev_ctx));
+
+    /* Register callback for handling ZCL commands. */
+    ZB_ZCL_REGISTER_DEVICE_CB(zcl_device_cb);
 
     // Register sensor device context (endpoints).
     ZB_AF_REGISTER_DEVICE_CTX(&multi_sensor_ctx);

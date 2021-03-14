@@ -1,10 +1,10 @@
 #pragma once
 
 // This file contains custom data structures that didn't exist in the ZCL libraries
+// "zbc" prefix = Zigbee Custom
 
 #include "zb_zcl_power_config.h"
 
-// "zbc" prefix = Zigbee Custom
 
 // simplified power declaration copied from https://github.com/lmahmutov/nrf52_multisensor/blob/master/zigbee_lacking.h
 /**@brief power Measurement cluster attributes according to ZCL Specification 4.5.2.1.1. */
@@ -37,6 +37,13 @@ typedef struct {
   (zb_voidp_t) data_ptr                                         \
 }
 
+#define ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_WRITEABLE_ID(data_ptr) \
+{                                                                                              \
+    ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,                                       \
+    ZB_ZCL_ATTR_TYPE_U48,                                                                      \
+    ZB_ZCL_ATTR_ACCESS_READ_WRITE | ZB_ZCL_ATTR_ACCESS_REPORTING,                              \
+    (zb_voidp_t) data_ptr                                                                      \
+}
 
 typedef union {
     struct {
