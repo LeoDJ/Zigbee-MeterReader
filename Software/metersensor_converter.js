@@ -10,16 +10,21 @@ const reporting = require('zigbee-herdsman-converters/lib/reporting');
 const e = exposes.presets;
 
 const tzLocal = {
-    gingerlabs_energy_set: {
+    energy_set: {
         key: ['energy'],
         convertSet: async (entity, key, value, meta) => {
             const multiplier = entity.getClusterAttributeValue('seMetering', 'multiplier');
             const divisor = entity.getClusterAttributeValue('seMetering', 'divisor');
             const factor = multiplier && divisor ? multiplier / divisor : 1;
 
-            let toSend = value / factor;
+            let rawValue = value / factor;
 
-            // meta.logger.info(`Multiplier: ${multiplier}, Divisor: ${divisor}, Factor: ${factor}, Value: ${value}, ToSend: ${toSend}`);
+            // for some reason zigbee2mqtt doesn't convert uint48 values automatically to the format the buffer writer needs (array of high 16 and low 32 bits)
+            let toSend = [
+                Math.floor(rawValue / 0x000100000000) & 0xFFFF, // upper 16 bits
+                rawValue & 0x0000FFFFFFFF];                     // lower 32 bits
+
+            // meta.logger.info(JSON.stringify({raw: rawValue, toSend: toSend}));
 
             await entity.write('seMetering', {'currentSummDelivered': toSend});
         }
@@ -32,7 +37,7 @@ const device = {
     vendor: 'Gingerlabs',
     description: 'Universal pulse sensor',
     fromZigbee: [fz.battery, fz.metering],
-    toZigbee: [tzLocal.gingerlabs_energy_set],
+    toZigbee: [tzLocal.energy_set],
     meta: {configureKey: 1},
     exposes: [
         e.battery(), 

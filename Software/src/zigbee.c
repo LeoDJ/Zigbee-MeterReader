@@ -170,7 +170,9 @@ static void zb_app_timer_handler(void * context)
     batVoltage = (batVoltage + 1) % 200;
     // NRF_LOG_INFO("Battery Voltage: %d", m_dev_ctx.power_attr.battery_voltage);
 
-    NRF_LOG_INFO("current summation delivered: %d", m_dev_ctx.metering_attr.curr_summ_delivered.low);
+    zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
+
+    NRF_LOG_INFO("current summation delivered: %d", curSum.low); // can't really print any values over 32bits, %lld doesn't work
 
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
         ZB_ZCL_CLUSTER_ID_METERING,
@@ -326,12 +328,12 @@ static zb_void_t zcl_device_cb(zb_bufid_t bufid)
         case ZB_ZCL_SET_ATTR_VALUE_CB_ID: {
             cluster_id = p_device_cb_param->cb_param.set_attr_value_param.cluster_id;
             attr_id    = p_device_cb_param->cb_param.set_attr_value_param.attr_id;
-            zb_uint48_t value = p_device_cb_param->cb_param.set_attr_value_param.values.data48;
+            // zb_uint48_t value = p_device_cb_param->cb_param.set_attr_value_param.values.data48;
             // switch(cluster_id) {
             //     case ZB_ZCL_CLUSTER_ID_METERING:
             //     break;
             // }
-            NRF_LOG_INFO("Unhandled cluster id: %d, attribute: %d, value: %d", cluster_id, attr_id, value.low);
+            // NRF_LOG_INFO("Unhandled cluster id: %d, attribute: %d, value: %d, %d", cluster_id, attr_id, value.low, value.high);
             break;
         }
     }
