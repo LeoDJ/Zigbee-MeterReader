@@ -45,6 +45,22 @@ typedef struct {
     (zb_voidp_t) data_ptr                                                                      \
 }
 
+#define ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_MULTIPLIER_WRITEABLE_ID(data_ptr)                  \
+{                                                                                            \
+  ZB_ZCL_ATTR_METERING_MULTIPLIER_ID,                                                        \
+  ZB_ZCL_ATTR_TYPE_U24,                                                                      \
+  ZB_ZCL_ATTR_ACCESS_READ_WRITE,                                                              \
+  (zb_voidp_t) data_ptr                                                                      \
+}
+
+#define ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_DIVISOR_WRITEABLE_ID(data_ptr)                     \
+{                                                                                            \
+  ZB_ZCL_ATTR_METERING_DIVISOR_ID,                                                           \
+  ZB_ZCL_ATTR_TYPE_U24,                                                                      \
+  ZB_ZCL_ATTR_ACCESS_READ_WRITE,                                                              \
+  (zb_voidp_t) data_ptr                                                                      \
+}
+
 typedef union {
     struct {
         zb_uint8_t digits_right : 3;    // Nubmer of digits to the right of the decimal point

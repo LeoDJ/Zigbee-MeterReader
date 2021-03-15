@@ -41,8 +41,9 @@ static sensor_device_ctx_t m_dev_ctx = {
         .instantaneous_demand               = 0,
         .demand_formatting                  = 0,
         .historical_consumption_formatting  = 0,
-        .multiplier                         = 1,
-        .divisor                            = 1000
+        .multiplier                         = 1000,
+        .divisor.low                        = (1000000 & 0xFFFF),
+        .divisor.high                       = (1000000 >> 16) & 0xFF
     }
 };
 
@@ -85,8 +86,8 @@ ZB_ZCL_START_DECLARE_ATTRIB_LIST(meter_attr_list)
     ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID, (&m_dev_ctx.metering_attr.instantaneous_demand))
     ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_DEMAND_FORMATTING_ID, (&m_dev_ctx.metering_attr.demand_formatting))
     ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_HISTORICAL_CONSUMPTION_FORMATTING_ID, (&m_dev_ctx.metering_attr.historical_consumption_formatting))
-    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_MULTIPLIER_ID, (&m_dev_ctx.metering_attr.multiplier))
-    ZB_ZCL_SET_ATTR_DESC(ZB_ZCL_ATTR_METERING_DIVISOR_ID, (&m_dev_ctx.metering_attr.divisor))
+    ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_MULTIPLIER_WRITEABLE_ID(&m_dev_ctx.metering_attr.multiplier),
+    ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_DIVISOR_WRITEABLE_ID(&m_dev_ctx.metering_attr.divisor),
     ZB_ZCL_FINISH_DECLARE_ATTRIB_LIST;
 
 // ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration for better readability
@@ -172,7 +173,7 @@ static void zb_app_timer_handler(void * context)
 
     zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
 
-    NRF_LOG_INFO("current summation delivered: %d", curSum.low); // can't really print any values over 32bits, %lld doesn't work
+    // NRF_LOG_INFO("current summation delivered: %d", curSum.low); // can't really print any values over 32bits, %lld doesn't work
 
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
         ZB_ZCL_CLUSTER_ID_METERING,
@@ -317,25 +318,41 @@ void zboss_signal_handler(zb_bufid_t bufid)
  */
 static zb_void_t zcl_device_cb(zb_bufid_t bufid)
 {
-    zb_uint8_t                       cluster_id;
-    zb_uint8_t                       attr_id;
+    zb_uint16_t                       cluster_id;
+    zb_uint16_t                       attr_id;
     zb_zcl_device_callback_param_t * p_device_cb_param = ZB_BUF_GET_PARAM(bufid, zb_zcl_device_callback_param_t);
-
-    NRF_LOG_INFO("zcl_device_cb id %hd", p_device_cb_param->device_cb_id);
 
     switch (p_device_cb_param->device_cb_id)
     {
         case ZB_ZCL_SET_ATTR_VALUE_CB_ID: {
-            cluster_id = p_device_cb_param->cb_param.set_attr_value_param.cluster_id;
-            attr_id    = p_device_cb_param->cb_param.set_attr_value_param.attr_id;
-            // zb_uint48_t value = p_device_cb_param->cb_param.set_attr_value_param.values.data48;
-            // switch(cluster_id) {
-            //     case ZB_ZCL_CLUSTER_ID_METERING:
-            //     break;
-            // }
-            // NRF_LOG_INFO("Unhandled cluster id: %d, attribute: %d, value: %d, %d", cluster_id, attr_id, value.low, value.high);
+            zb_zcl_set_attr_value_param_t param = p_device_cb_param->cb_param.set_attr_value_param;
+            cluster_id = param.cluster_id;
+            attr_id    = param.attr_id;
+            switch(cluster_id) {
+                case ZB_ZCL_CLUSTER_ID_METERING: {
+                    switch(attr_id) {
+                        case ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID:
+                            NRF_LOG_INFO("Received new meter reading: %d (lower 32 bits)", param.values.data48.low); // can't really print any values over 32bits, %lld doesn't work
+                            powerUsage = param.values.data48.low | (uint64_t)param.values.data48.high << 32;
+                            break; 
+                        case ZB_ZCL_ATTR_METERING_MULTIPLIER_ID:
+                            NRF_LOG_INFO("Received multiplier setting: %d", param.values.data24.low | param.values.data24.high << 16);
+                            break;
+                        case ZB_ZCL_ATTR_METERING_DIVISOR_ID:
+                            NRF_LOG_INFO("Received divisor setting: %d", param.values.data24.low | param.values.data24.high << 16);
+                            break;
+                    }
+                    break;
+                }
+                default:
+                    NRF_LOG_INFO("Unhandled cluster id: %d, attribute: %d", cluster_id, attr_id);
+                    break;
+            }
             break;
         }
+        default:
+            NRF_LOG_INFO("Unhandled zcl_device_cb id %hd", p_device_cb_param->device_cb_id);
+            break;
     }
 }
 
