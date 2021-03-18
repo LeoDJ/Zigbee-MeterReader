@@ -79,11 +79,13 @@ const device = {
     model: 'Pulsesensor',
     vendor: 'Gingerlabs',
     description: 'Universal pulse sensor',
-    fromZigbee: [fz.battery, fz.metering, fzLocal.factor],
+    fromZigbee: [fz.battery, fz.temperature, fz.metering, fzLocal.factor],
     toZigbee: [tzLocal.energy_set, tzLocal.factor],
     meta: {configureKey: 1},
     exposes: [
-        e.battery(), 
+        e.battery(),
+        e.temperature()
+            .withDescription('Measured processor temperature value'),
         e.power(), 
         e.energy()
             .withAccess(exposes.access.STATE_SET)
@@ -97,10 +99,11 @@ const device = {
     ],
     configure: async (device, coordinatorEndpoint, logger) => {
         const endpoint = device.getEndpoint(10);
-        const binds = ['genPowerCfg', 'seMetering'];
+        const binds = ['genPowerCfg', 'msTemperatureMeasurement', 'seMetering'];
         await reporting.bind(endpoint, coordinatorEndpoint, binds);
         await reporting.batteryPercentageRemaining(endpoint);
         await reporting.batteryVoltage(endpoint);
+        await reporting.temperature(endpoint, {min: 3600, max: 14400, change: 100}); // 1-4h, 1°C change
         await reporting.readMeteringMultiplierDivisor(endpoint);
         await reporting.currentSummDelivered(endpoint, {change: 0.001});
         await reporting.instantaneousDemand(endpoint, {min: 0, max: 900, change: 1}); // min max interval in s

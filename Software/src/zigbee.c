@@ -3,6 +3,7 @@
 
 #include "zigbee.h"
 #include "adc.h"
+#include "temperature.h"
 
 #if !defined ZB_ED_ROLE
 #error Define ZB_ED_ROLE to compile End Device source code.
@@ -45,6 +46,12 @@ static sensor_device_ctx_t m_dev_ctx = {
         .multiplier                         = 1000,
         .divisor.low                        = (1000000 & 0xFFFF),
         .divisor.high                       = (1000000 >> 16) & 0xFF
+    },
+    .temp_attr = (zb_zcl_temp_measurement_attrs_t) {
+        .measure_value      = 0,        // nRF52840 internal temperature sensor
+        .min_measure_value  = -4000,    // values taken from nRF52840_OPS_v0.5.pdf, chapter 26.2
+        .max_measure_value  = 8500,     // -40 - 85 °C, +-5°C accuracy
+        .tolerance          = 500
     }
 };
 
@@ -91,6 +98,12 @@ ZB_ZCL_START_DECLARE_ATTRIB_LIST(meter_attr_list)
     ZBC_SET_ATTR_DESCR_WITH_ZB_ZCL_ATTR_METERING_DIVISOR_WRITEABLE_ID(&m_dev_ctx.metering_attr.divisor),
     ZB_ZCL_FINISH_DECLARE_ATTRIB_LIST;
 
+ZB_ZCL_DECLARE_TEMP_MEASUREMENT_ATTRIB_LIST(temp_attr_list,
+    &m_dev_ctx.temp_attr.measure_value,
+    &m_dev_ctx.temp_attr.min_measure_value,
+    &m_dev_ctx.temp_attr.max_measure_value,
+    &m_dev_ctx.temp_attr.tolerance);
+
 // ZB_DECLARE_MULTI_SENSOR_CLUSTER_LIST replaced with direct array declaration for better readability
 zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
     ZB_ZCL_CLUSTER_DESC(
@@ -122,6 +135,13 @@ zb_zcl_cluster_desc_t multi_sensor_clusters[] = {
         ZB_ZCL_MANUF_CODE_INVALID
     ),
     ZB_ZCL_CLUSTER_DESC(
+        ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
+        ZB_ZCL_ARRAY_SIZE(temp_attr_list, zb_zcl_attr_t),
+        (temp_attr_list),
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_MANUF_CODE_INVALID
+    ),
+    ZB_ZCL_CLUSTER_DESC(
         ZB_ZCL_CLUSTER_ID_IDENTIFY,
         0,
         NULL,
@@ -137,6 +157,9 @@ ZB_ZCL_DECLARE_MULTI_SENSOR_EP(multi_sensor_ep,
 ZBOSS_DECLARE_DEVICE_CTX_1_EP(multi_sensor_ctx, multi_sensor_ep);
 
 APP_TIMER_DEF(zb_app_timer);
+
+
+
 
 zb_uint8_t batVoltage = 0;
 zb_uint64_t powerUsage = 0;
@@ -199,6 +222,16 @@ static void zb_app_timer_handler(void * context)
     powerUsage += 10;
 
     adcDoSample();
+
+    // for now just poll the sensor every second
+    int16_t temp = tempGet();
+    NRF_LOG_INFO("Temp: %d", temp);
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID,
+        (zb_uint8_t *)&temp,
+        ZB_FALSE);
 
     
 }

@@ -17,6 +17,7 @@ SRC_FILES += \
 	$(PROJ_DIR)/main.c \
 	$(PROJ_DIR)/adc.c \
 	$(PROJ_DIR)/zigbee.c \
+	${PROJ_DIR}/temperature.c \
 	$(SDK_ROOT)/components/boards/boards.c \
 	$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd/nrf_nvic.c \
 	$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd/nrf_soc.c \

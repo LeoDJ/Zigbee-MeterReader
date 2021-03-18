@@ -8,6 +8,7 @@
 
 #include "zigbee.h"
 #include "adc.h"
+#include "temperature.h"
 
 /**@brief Function for the Timer initialization.
  *
@@ -52,6 +53,7 @@ int main(void)
     leds_init();
     
     adcInit();
+    tempInit();
 
     NRF_LOG_INFO("Hello World!");
 
