@@ -7,6 +7,7 @@
 #include <nrf_log_default_backends.h>
 
 #include "zigbee.h"
+#include "adc.h"
 
 /**@brief Function for the Timer initialization.
  *
@@ -49,10 +50,12 @@ int main(void)
     timers_init();
     log_init();
     leds_init();
+    
+    adcInit();
 
     NRF_LOG_INFO("Hello World!");
 
-    bsp_board_led_on(0);
+    // bsp_board_led_on(0);
 
     zigbeeInit();
 

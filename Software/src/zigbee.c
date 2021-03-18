@@ -2,6 +2,7 @@
 #include <zb_error_handler.h>
 
 #include "zigbee.h"
+#include "adc.h"
 
 #if !defined ZB_ED_ROLE
 #error Define ZB_ED_ROLE to compile End Device source code.
@@ -197,6 +198,8 @@ static void zb_app_timer_handler(void * context)
 
     powerUsage += 10;
 
+    adcDoSample();
+
     
 }
 
@@ -284,7 +287,7 @@ void zboss_signal_handler(zb_bufid_t bufid)
     zb_ret_t                   status      = ZB_GET_APP_SIGNAL_STATUS(bufid);
 
     /* Update network status LED */
-    // zigbee_led_status_update(bufid, ZIGBEE_NETWORK_STATE_LED);
+    zigbee_led_status_update(bufid, ZIGBEE_NETWORK_STATE_LED);
 
     switch (sig)
     {

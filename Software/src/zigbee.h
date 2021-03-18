@@ -17,7 +17,7 @@
 #define SENSOR_INIT_BASIC_PH_ENV            ZB_ZCL_BASIC_ENV_UNSPECIFIED        /**< Description of the type of physical environment. For possible values, see section 3.2.2.2.10 of the ZCL specification. */
 
 #define MULTI_SENSOR_ENDPOINT               10                                  /**< Device endpoint. Used to receive light controlling commands. */
-#define ZIGBEE_NETWORK_STATE_LED            BSP_BOARD_LED_2                     /**< LED indicating that light switch successfully joind Zigbee network. */
+#define ZIGBEE_NETWORK_STATE_LED            0 //BSP_BOARD_LED_0                     /**< LED indicating that light switch successfully joind Zigbee network. */
 
 
 #define ZB_DEVICE_VER_MULTI_SENSOR          0                                    /**< Multisensor device version. */
