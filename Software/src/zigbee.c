@@ -174,11 +174,14 @@ static void zb_app_timer_handler(void * context)
 {
     zb_zcl_status_t zcl_status;
 
+    uint32_t batVoltage = adcGetVcc();
+    uint8_t zbBatVolt = batVoltage / 100;
+    uint8_t zbBatPercent = batVoltage < 3000 ? 0 : (batVoltage - 3000) / 6; // 3.0V = 0%, 4.2V = 100% (value=200), just linear for now
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
         ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
         ZB_ZCL_CLUSTER_SERVER_ROLE,
         ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_VOLTAGE_ID,
-        &batVoltage,
+        &zbBatVolt,
         ZB_FALSE );
     if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
         NRF_LOG_INFO("Set battery voltage value fail. zcl_status: %d", zcl_status);
@@ -187,12 +190,11 @@ static void zb_app_timer_handler(void * context)
         ZB_ZCL_CLUSTER_ID_POWER_CONFIG,
         ZB_ZCL_CLUSTER_SERVER_ROLE,
         ZB_ZCL_ATTR_POWER_CONFIG_BATTERY_PERCENTAGE_REMAINING_ID,
-        &batVoltage,
+        &zbBatPercent,
         ZB_FALSE );
     if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
         NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
     }
-    batVoltage = (batVoltage + 1) % 200;
     // NRF_LOG_INFO("Battery Voltage: %d", m_dev_ctx.power_attr.battery_voltage);
 
     zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
@@ -221,11 +223,9 @@ static void zb_app_timer_handler(void * context)
 
     powerUsage += 10;
 
-    adcDoSample();
-
     // for now just poll the sensor every second
     int16_t temp = tempGet();
-    NRF_LOG_INFO("Temp: %d", temp);
+    // NRF_LOG_INFO("Temp: %d", temp);
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
         ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
         ZB_ZCL_CLUSTER_SERVER_ROLE,
