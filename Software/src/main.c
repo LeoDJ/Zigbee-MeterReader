@@ -9,6 +9,7 @@
 #include "zigbee.h"
 #include "adc.h"
 #include "temperature.h"
+#include "irSensor.h"
 
 /**@brief Function for the Timer initialization.
  *
@@ -54,6 +55,7 @@ int main(void)
     
     adcInit();
     tempInit();
+    irSensorInit(); // ToDo: call when Zigbee connect succeeded
 
     NRF_LOG_INFO("Hello World!");
 

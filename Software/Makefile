@@ -18,6 +18,7 @@ SRC_FILES += \
 	$(PROJ_DIR)/adc.c \
 	$(PROJ_DIR)/zigbee.c \
 	${PROJ_DIR}/temperature.c \
+	${PROJ_DIR}/irSensor.c \
 	$(SDK_ROOT)/components/boards/boards.c \
 	$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd/nrf_nvic.c \
 	$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd/nrf_soc.c \
@@ -69,6 +70,7 @@ SRC_FILES += \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rng.c \
+	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rtc.c \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_saadc.c \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
 	$(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_timer.c \

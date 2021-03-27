@@ -2,7 +2,6 @@
 #include <nrf_log.h>
 #include <nrfx_saadc.h>
 
-
 // set input to VDDH and divide by 10
 nrf_saadc_channel_config_t adcChCfg_vddh = {
     .resistor_p = NRF_SAADC_RESISTOR_DISABLED,
@@ -11,7 +10,7 @@ nrf_saadc_channel_config_t adcChCfg_vddh = {
     .reference  = NRF_SAADC_REFERENCE_INTERNAL,
     .acq_time   = NRF_SAADC_ACQTIME_40US,
     .mode       = NRF_SAADC_MODE_SINGLE_ENDED,
-    .burst      = NRF_SAADC_BURST_ENABLED,
+    .burst      = NRF_SAADC_BURST_DISABLED,
     .pin_p      = SAADC_CH_PSELP_PSELP_VDDHDIV5,
     .pin_n      = NRF_SAADC_INPUT_DISABLED,
 };
@@ -30,7 +29,7 @@ nrf_saadc_channel_config_t adcChCfg_sensor = {
     .reference  = NRF_SAADC_REFERENCE_INTERNAL,
     .acq_time   = NRF_SAADC_ACQTIME_10US,
     .mode       = NRF_SAADC_MODE_SINGLE_ENDED,
-    .burst      = NRF_SAADC_BURST_ENABLED,
+    .burst      = NRF_SAADC_BURST_DISABLED,
     .pin_p      = SAADC_CH_PSELP_PSELP_AnalogInput0,
     .pin_n      = NRF_SAADC_INPUT_DISABLED,
 };
@@ -42,36 +41,82 @@ nrfx_saadc_config_t adcCfg_sensor = {
     .interrupt_priority = APP_IRQ_PRIORITY_LOW
 };
 
-static nrf_saadc_value_t adcBuf[2][ADC_SAMPLE_NUM];
+void (*_adcVccCallback)(uint32_t) = NULL;
+void (*_adcSensorCallback)(int16_t) = NULL;
 
-static nrf_saadc_value_t convertedSamples[1];
+static nrf_saadc_value_t adcBuf[2][ADC_SAMPLE_NUM+1];
+
+bool sampleVcc = false;
+bool setupVccSampling = false;
+
+uint8_t adcSamplingState = ADC_SampleSensor;
+
 
 void adcCallback(nrfx_saadc_evt_t const * p_event) {
     if (p_event->type == NRFX_SAADC_EVT_DONE) {
-        nrfx_saadc_buffer_convert(p_event->data.done.p_buffer, ADC_SAMPLE_NUM);
-        convertedSamples[0] = p_event->data.done.p_buffer[0];
-        NRF_LOG_INFO("Called adc callback");
+
+        switch(adcSamplingState) {
+            case ADC_SampleSensor:
+                NRF_LOG_INFO("Sensor callback: %d", p_event->data.done.p_buffer[0]);
+                if (_adcSensorCallback) {
+                    _adcSensorCallback(p_event->data.done.p_buffer[0]);
+                }
+                break;
+            case ADC_SetupSampleVcc:
+                nrfx_saadc_channel_init(1, &adcChCfg_vddh);
+                nrfx_saadc_buffer_convert(p_event->data.done.p_buffer, 1 + ADC_SAMPLE_NUM);
+                adcSamplingState = ADC_SampleVcc;   // set next conversion to include VCC
+                nrfx_saadc_sample();                // immediately trigger next conversion
+                return;                             // nothing else should be done for the setup
+                break;
+            case ADC_SampleVcc:
+                nrfx_saadc_channel_uninit(1);           // deactivate battery measurement channel again
+                adcSamplingState = ADC_SampleSensor;    // reset ADC sampling state to normal    
+                if(_adcVccCallback) {
+                    uint32_t batVolt = ((uint32_t)p_event->data.done.p_buffer[1]) * 1000 / ADC_COUNTS_PER_VOLT;
+                    _adcVccCallback(batVolt);
+                }
+                break;
+        }
+
+        // I could technically do the sensor reading callback here, as the VCC reading also contains a sample of channel 0, but I'm not sure of the timing
+
+        // setup next conversion
+        ret_code_t err = nrfx_saadc_buffer_convert(p_event->data.done.p_buffer, ADC_SAMPLE_NUM);
+    }
+    else {
+        NRF_LOG_INFO("Other ADC event: %d", p_event->type);
     }
     
 }
 
-uint32_t adcGetVcc() {
-    nrfx_saadc_channel_init(1, &adcChCfg_vddh);
+void adcTriggerVccReading() {
+    // flush out waiting sensor conversion, actual ADC setup for VCC is done in callback
+    // would've liked to use saadc_abort() here, but apparently app_timer counts as an interrupt context and thus it can't be used
+    adcSamplingState = ADC_SetupSampleVcc;
+    nrfx_saadc_sample(); 
+}
 
-    nrf_saadc_value_t adcVal;
-    nrfx_saadc_sample_convert(1, &adcVal); // blocking, TODO: check if other conversion is running
-    uint32_t batVolt = ((uint32_t)adcVal) * 1000 / ADC_COUNTS_PER_VOLT;
-    NRF_LOG_INFO("ADC: %d -> %d mV", adcVal, batVolt);
-
-    nrfx_saadc_channel_uninit(1);
-
-    return batVolt;
+void adcSetVccCallback(void (*callback)(uint32_t)) {
+    _adcVccCallback = callback;
 }
 
 void adcInit() {
     nrfx_saadc_init(&adcCfg_sensor, adcCallback);
     nrfx_saadc_channel_init(0, &adcChCfg_sensor);
-    nrfx_saadc_channel_init(1, &adcChCfg_vddh);
-    // nrfx_saadc_buffer_convert(adcBuf[0], ADC_SAMPLE_NUM); // currently messes with vcc sampling, TODO: find out why
-    // nrfx_saadc_buffer_convert(adcBuf[1], ADC_SAMPLE_NUM);
+    // nrfx_saadc_channel_init(1, &adcChCfg_vddh);  // init channel only when needed
+    nrfx_saadc_buffer_convert(adcBuf[0], ADC_SAMPLE_NUM);
+    // nrfx_saadc_buffer_convert(adcBuf[1], ADC_SAMPLE_NUM); // I don't think I need double-buffering?
+}
+
+bool adcTriggerSample() {
+    if (adcSamplingState == ADC_SampleSensor) {
+        nrfx_saadc_sample();
+        return true;
+    }
+    return false;
+}
+
+void adcSetSensorCallback(void (*callback)(int16_t)) {
+    _adcSensorCallback = callback;
 }

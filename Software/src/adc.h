@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define ADC_SAMPLE_NUM  1 // number of active channels
 
@@ -8,4 +9,13 @@
 #define ADC_COUNTS_PER_VOLT 682
 
 void adcInit();
-uint32_t adcGetVcc(); // returns mV, blocking
+bool adcTriggerSample();
+void adcSetSensorCallback(void (*callback)(int16_t));
+void adcTriggerVccReading(); // returns mV, blocking
+void adcSetVccCallback(void (*callback)(uint32_t));
+
+enum AdcSamplingState {
+    ADC_SampleSensor,
+    ADC_SetupSampleVcc,
+    ADC_SampleVcc
+};

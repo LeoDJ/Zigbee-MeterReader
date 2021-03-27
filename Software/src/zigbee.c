@@ -159,22 +159,8 @@ ZBOSS_DECLARE_DEVICE_CTX_1_EP(multi_sensor_ctx, multi_sensor_ep);
 APP_TIMER_DEF(zb_app_timer);
 
 
-
-
-zb_uint8_t batVoltage = 0;
-zb_uint64_t powerUsage = 0;
-
-/**@brief Function for handling nrf app timer.
- * 
- * @param[IN]   context   Void pointer to context function is called with.
- * 
- * @details Function is called with pointer to sensor_device_ep_ctx_t as argument.
- */
-static void zb_app_timer_handler(void * context)
-{
+void zb_battery_callback(uint32_t batVoltage) {
     zb_zcl_status_t zcl_status;
-
-    uint32_t batVoltage = adcGetVcc();
     uint8_t zbBatVolt = batVoltage / 100;
     uint8_t zbBatPercent = batVoltage < 3000 ? 0 : (batVoltage - 3000) / 6; // 3.0V = 0%, 4.2V = 100% (value=200), just linear for now
     zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
@@ -195,7 +181,23 @@ static void zb_app_timer_handler(void * context)
     if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
         NRF_LOG_INFO("Set battery percentage value fail. zcl_status: %d", zcl_status);
     }
-    // NRF_LOG_INFO("Battery Voltage: %d", m_dev_ctx.power_attr.battery_voltage);
+    NRF_LOG_INFO("Battery Voltage: %d", batVoltage /*m_dev_ctx.power_attr.battery_voltage*/);
+}
+
+
+zb_uint64_t powerUsage = 0;
+
+/**@brief Function for handling nrf app timer.
+ * 
+ * @param[IN]   context   Void pointer to context function is called with.
+ * 
+ * @details Function is called with pointer to sensor_device_ep_ctx_t as argument.
+ */
+static void zb_app_timer_handler(void * context)
+{
+    zb_zcl_status_t zcl_status;
+
+    adcTriggerVccReading(); // TODO: move to reporting, when it actually gets requested
 
     zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
 
@@ -439,6 +441,9 @@ void zigbeeInit() {
     ZB_ERROR_CHECK(zb_err_code);
 
     // NRF_LOG_INFO("Sanity check that the m_dev_ctx didn't get overwritten and strings work: zcl_version: %d, Manufacturer: %s", m_dev_ctx.basic_attr.zcl_version, ((uint8_t *)m_dev_ctx.basic_attr.mf_name) + 1);
+
+    // register ADC callback
+    adcSetVccCallback(zb_battery_callback);
 }
 
 void zigbeeLoop() {
