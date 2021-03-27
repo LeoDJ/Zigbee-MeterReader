@@ -57,10 +57,7 @@ void adcCallback(nrfx_saadc_evt_t const * p_event) {
 
         switch(adcSamplingState) {
             case ADC_SampleSensor:
-                NRF_LOG_INFO("Sensor callback: %d", p_event->data.done.p_buffer[0]);
-                if (_adcSensorCallback) {
-                    _adcSensorCallback(p_event->data.done.p_buffer[0]);
-                }
+                // NRF_LOG_INFO("Sensor callback: %d", p_event->data.done.p_buffer[0]);
                 break;
             case ADC_SetupSampleVcc:
                 nrfx_saadc_channel_init(1, &adcChCfg_vddh);
@@ -79,10 +76,16 @@ void adcCallback(nrfx_saadc_evt_t const * p_event) {
                 break;
         }
 
-        // I could technically do the sensor reading callback here, as the VCC reading also contains a sample of channel 0, but I'm not sure of the timing
 
         // setup next conversion
         ret_code_t err = nrfx_saadc_buffer_convert(p_event->data.done.p_buffer, ADC_SAMPLE_NUM);
+
+        // I could technically do the sensor reading callback also for ADC_SampleVcc, as the VCC reading also contains a sample of channel 0, but I'm not sure of the timing
+        if (adcSamplingState == ADC_SampleSensor) {
+            if (_adcSensorCallback) {
+                _adcSensorCallback(p_event->data.done.p_buffer[0]);
+            }
+        }
     }
     else {
         NRF_LOG_INFO("Other ADC event: %d", p_event->type);

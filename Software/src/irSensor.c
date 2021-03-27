@@ -15,13 +15,15 @@ APP_TIMER_DEF(irSensorSampleTimer);
 int16_t irAmbientVal = 0, irReflectedVal = 0;
 
 void irDoCalculation() {
-    NRF_LOG_INFO("IR Ambient: %4d, Reflected: %4d", irAmbientVal, irReflectedVal);
+    // NRF_LOG_INFO("IR Ambient: %4d, Reflected: %4d", irAmbientVal, irReflectedVal);
+    NRF_LOG_RAW_INFO("%d,%d\n", irAmbientVal, irReflectedVal);
+
 }
 
 // TODO: currently the second sample trigger doesn't work for some reason, enough for today tho
 
 void irSensorAdcCallback(int16_t adcVal) {
-    NRF_LOG_INFO("State: %d, val: %d", sampleState, adcVal);
+    // NRF_LOG_INFO("State: %d, val: %d", sampleState, adcVal);
     switch (sampleState) {
         case IR_AmbientStarted:
             irAmbientVal = adcVal;
