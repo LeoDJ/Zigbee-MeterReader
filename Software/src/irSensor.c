@@ -11,6 +11,7 @@
 uint8_t sampleState = IR_Idle;
 
 APP_TIMER_DEF(irSensorSampleTimer);
+APP_TIMER_DEF(irSensorTriggerReflectiveSampleTimer);
 
 int16_t irAmbientVal = 0, irReflectedVal = 0;
 
@@ -20,30 +21,34 @@ void irDoCalculation() {
 
 }
 
-// TODO: currently the second sample trigger doesn't work for some reason, enough for today tho
-
 void irSensorAdcCallback(int16_t adcVal) {
     // NRF_LOG_INFO("State: %d, val: %d", sampleState, adcVal);
     switch (sampleState) {
         case IR_AmbientStarted:
             irAmbientVal = adcVal;
-            // TODO: enable IR LED GPIO
-            // TODO: maybe delay?
-            if (adcTriggerSample()) { // trigger reflective conversion
-                sampleState = IR_ReflectiveStarted;
-            } 
-            else {
-                // discard current sampling attempt completely
-                // TODO: disable IR LED GPIO
-                sampleState = IR_Idle;
-            }
+            nrf_gpio_pin_write(IR_LED_GPIO, 1);
+            sampleState = IR_ReflectiveStarted;
+            app_timer_start(irSensorTriggerReflectiveSampleTimer, APP_TIMER_TICKS(IR_LED_ON_TIME), NULL);
             break;
-        case IR_ReflectiveStarted:
-            // TODO: disable IR LED GPIO
+        case IR_ReflectiveDone:
+            nrf_gpio_pin_write(IR_LED_GPIO, 0);
             irReflectedVal = adcVal;
             irDoCalculation();
             sampleState = IR_Idle;
             break;
+    }
+}
+
+void irSensorTriggerReflectiveSample() {
+    if (sampleState == IR_ReflectiveStarted) {
+        if (adcTriggerSample()) { // trigger reflective conversion
+            sampleState = IR_ReflectiveDone;
+        } 
+        else {
+            // discard current sampling attempt completely, when conversion fails
+            nrf_gpio_pin_write(IR_LED_GPIO, 0);
+            sampleState = IR_Idle;
+        }
     }
 }
 
@@ -69,5 +74,10 @@ void irSensorInit() {
     err_code = app_timer_start(irSensorSampleTimer, APP_TIMER_TICKS(SAMPLING_FREQUENCY_US / 1000), NULL);
     APP_ERROR_CHECK(err_code);
 
+    err_code = app_timer_create(&irSensorTriggerReflectiveSampleTimer, APP_TIMER_MODE_SINGLE_SHOT, irSensorTriggerReflectiveSample);
+    APP_ERROR_CHECK(err_code);
+
     adcSetSensorCallback(irSensorAdcCallback);
+
+    nrf_gpio_cfg_output(IR_LED_GPIO);
 }

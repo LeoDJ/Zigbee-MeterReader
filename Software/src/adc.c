@@ -1,6 +1,7 @@
 #include "adc.h"
 #include <nrf_log.h>
 #include <nrfx_saadc.h>
+#include "config.h"
 
 // set input to VDDH and divide by 10
 nrf_saadc_channel_config_t adcChCfg_vddh = {
@@ -25,12 +26,12 @@ nrf_saadc_channel_config_t adcChCfg_vddh = {
 nrf_saadc_channel_config_t adcChCfg_sensor = {
     .resistor_p = NRF_SAADC_RESISTOR_DISABLED,
     .resistor_n = NRF_SAADC_RESISTOR_DISABLED,
-    .gain       = NRF_SAADC_GAIN1_6,
+    .gain       = IR_SENSE_GAIN,
     .reference  = NRF_SAADC_REFERENCE_INTERNAL,
     .acq_time   = NRF_SAADC_ACQTIME_10US,
     .mode       = NRF_SAADC_MODE_SINGLE_ENDED,
     .burst      = NRF_SAADC_BURST_DISABLED,
-    .pin_p      = SAADC_CH_PSELP_PSELP_AnalogInput0,
+    .pin_p      = IR_SENS_AIN,
     .pin_n      = NRF_SAADC_INPUT_DISABLED,
 };
 
