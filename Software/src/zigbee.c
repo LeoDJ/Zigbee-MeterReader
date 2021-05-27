@@ -4,6 +4,7 @@
 #include "zigbee.h"
 #include "adc.h"
 #include "temperature.h"
+#include "irSensor.h"
 
 #if !defined ZB_ED_ROLE
 #error Define ZB_ED_ROLE to compile End Device source code.
@@ -184,6 +185,35 @@ void zb_battery_callback(uint32_t batVoltage) {
     NRF_LOG_INFO("Battery Voltage: %d", batVoltage /*m_dev_ctx.power_attr.battery_voltage*/);
 }
 
+void zb_pulse_callback(uint32_t pulsesPerHour) {
+    zb_zcl_status_t zcl_status;
+
+    // increase current sum delivered
+    zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
+    zb_uint48_t one = {.low = 1};
+    ZB_UINT48_ADD(curSum, one);
+
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_METERING,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
+        (zb_uint8_t *)&curSum,
+        ZB_FALSE);
+    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+        NRF_LOG_INFO("Set current summation delivered value fail. zcl_status: %d", zcl_status);
+    }
+
+    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
+        ZB_ZCL_CLUSTER_ID_METERING,
+        ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID,
+        (zb_uint8_t *)&pulsesPerHour,
+        ZB_FALSE);
+    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
+        NRF_LOG_INFO("Set instantaneous demand value fail. zcl_status: %d", zcl_status);
+    }
+}
+
 
 zb_uint64_t powerUsage = 0;
 
@@ -199,29 +229,11 @@ static void zb_app_timer_handler(void * context)
 
     adcTriggerVccReading(); // TODO: move to reporting, when it actually gets requested
 
-    zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
+    // zb_uint48_t curSum = m_dev_ctx.metering_attr.curr_summ_delivered;
 
     // NRF_LOG_INFO("current summation delivered: %d", curSum.low); // can't really print any values over 32bits, %lld doesn't work
 
-    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
-        ZB_ZCL_CLUSTER_ID_METERING,
-        ZB_ZCL_CLUSTER_SERVER_ROLE,
-        ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
-        (zb_uint8_t *)&powerUsage,
-        ZB_FALSE);
-    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
-        NRF_LOG_INFO("Set current summation delivered value fail. zcl_status: %d", zcl_status);
-    }
-
-    zcl_status = zb_zcl_set_attr_val(MULTI_SENSOR_ENDPOINT,
-        ZB_ZCL_CLUSTER_ID_METERING,
-        ZB_ZCL_CLUSTER_SERVER_ROLE,
-        ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID,
-        (zb_uint8_t *)&powerUsage,
-        ZB_FALSE);
-    if(zcl_status != ZB_ZCL_STATUS_SUCCESS) {
-        NRF_LOG_INFO("Set instantaneous demand value fail. zcl_status: %d", zcl_status);
-    }
+    
 
     powerUsage += 10;
 
@@ -333,7 +345,7 @@ void zboss_signal_handler(zb_bufid_t bufid)
             ZB_ERROR_CHECK(zigbee_default_signal_handler(bufid));
             if (status == RET_OK)
             {
-                ret_code_t err_code = app_timer_start(zb_app_timer, APP_TIMER_TICKS(1000), NULL);
+                ret_code_t err_code = app_timer_start(zb_app_timer, APP_TIMER_TICKS(5000), NULL);
                 APP_ERROR_CHECK(err_code);
             }
             break;
@@ -444,6 +456,7 @@ void zigbeeInit() {
 
     // register ADC callback
     adcSetVccCallback(zb_battery_callback);
+    irSensorSetPulseCallback(zb_pulse_callback);
 }
 
 void zigbeeLoop() {
