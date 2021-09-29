@@ -1,0 +1,3 @@
+[submodule "MeterReader_PCB/libs/LeoDJ-kicad"]
+	path = MeterReader_PCB/libs/LeoDJ-kicad
+	url = https://github.com/LeoDJ/LeoDJ-kicad

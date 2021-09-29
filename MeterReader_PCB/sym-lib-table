@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "LeoDJ")(type "KiCad")(uri "${KIPRJMOD}/libs/LeoDJ-kicad/LeoDJ.kicad_sym")(options "")(descr ""))
+  (lib (name "e73-2g4m08s1c")(type "Legacy")(uri "${KIPRJMOD}/libs/Franz-E73-2G4M08S1C/e73-2g4m08s1c.lib")(options "")(descr ""))
+)
