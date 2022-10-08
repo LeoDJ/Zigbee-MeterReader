@@ -1,3 +1,6 @@
 [submodule "MeterReader_PCB/libs/LeoDJ-kicad"]
 	path = MeterReader_PCB/libs/LeoDJ-kicad
 	url = https://github.com/LeoDJ/LeoDJ-kicad
+[submodule "MeterReader_PCB/libs/Panelization.pretty"]
+	path = MeterReader_PCB/libs/Panelization.pretty
+	url = https://github.com/madworm/Panelization.pretty
